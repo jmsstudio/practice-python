@@ -1,9 +1,8 @@
-# program template for Spaceship
+#Spaceship
 import simplegui
 import math
 import random
 
-# globals for user interface
 WIDTH = 800
 HEIGHT = 600
 score = 0
@@ -89,7 +88,7 @@ def dist(p,q):
 
 # Ship class
 class Ship:
-    def __init__(self, pos, vel, angle, image, info):
+    def __init__(self, pos, vel, angle, image, info, thrust_sound):
         self.pos = [pos[0],pos[1]]
         self.vel = [vel[0],vel[1]]
         self.thrust = False
@@ -99,21 +98,62 @@ class Ship:
         self.image_center = info.get_center()
         self.image_size = info.get_size()
         self.radius = info.get_radius()
+        self.thrust_sound = thrust_sound
         
-    def draw(self,canvas):
-        canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size, self.radius)
+    def draw(self,canvas):       
+        location = self.image_center
+        if self.thrust:
+            location = (self.image_center[0] + self.image_size[0], self.image_center[1])
+
+        canvas.draw_image(self.image, location, self.image_size, self.pos, self.image_size, self.angle)
 
     def update(self):
         self.pos[0] += self.vel[0]
         self.pos[1] += self.vel[1]
 
-        self.radius += self.angle_vel
+        self.angle += self.angle_vel
 
-        if self.pos[0] <= self.radius or self.pos[0] >= WIDTH - self.radius:
-            self.vel[0] = - self.vel[0]
-            self.vel[1] = - self.vel[1]
+        if self.thrust:
+            self.vel = angle_to_vector(self.angle)
+        
+        if self.pos[0] >= WIDTH:
+            self.pos[0] = 0
+        elif self.pos[0] <= 0:
+            self.pos[0] = WIDTH - 1
+
+        if self.pos[1] >= HEIGHT:
+            self.pos[1] = 0
+        elif self.pos[1] <= 0:
+            self.pos[1] = HEIGHT - 1
 
             
+            
+    def turn_left(self):
+        self.angle_vel -= 0.02
+        
+    def turn_right(self):
+        self.angle_vel += 0.02
+        
+    def do_thrust(self, is_thrusting = True):
+        self.thrust = is_thrusting
+        
+        if is_thrusting and self.thrust_sound:
+            self.thrust_sound.play()
+        
+        if not is_thrusting:
+            self.thrust_sound.pause()
+            self.thrust_sound.rewind()
+            if self.vel[0] > 0 and self.vel[0] - 1 > 1:
+                self.vel[0] -= 1
+            else:
+                self.vel[0] = 0
+
+            if self.vel[1] > 0 and self.vel[1] - 1 > 1:
+                self.vel[1] -= 1
+            else:
+                self.vel[1] = 0
+
+    
     def __str__(self):
         ship_txt = 'Ship: '
         ship_txt += ' position: ' + str(self.pos)
@@ -180,35 +220,28 @@ def key_down(key):
     global my_ship
     
     if key == simplegui.KEY_MAP['left']:
-        my_ship.angle_vel -= 0.02
+        my_ship.turn_left()
     elif key == simplegui.KEY_MAP['right']:
-        my_ship.angle_vel += 0.02
+        my_ship.turn_right()
     elif key == simplegui.KEY_MAP['up']:
-        print 'thrust'
-        my_ship.thrust = True
-        print str(angle_to_vector(my_ship.angle))
-        my_ship.vel = angle_to_vector(my_ship.angle)
-        print str(my_ship)
+        my_ship.do_thrust()
 
 def key_up(key):
     #controls thrust
     global my_ship
     
-    my_ship.angle_vel = 0
-    my_ship.thrust = False
-    
-    if my_ship.vel[0] > 0:
-        my_ship.vel[0] -= 1
-    if my_ship.vel[1] > 0:
-        my_ship.vel[1] -= 1
+    if key == simplegui.KEY_MAP['up']:
+        my_ship.do_thrust(False)
+        
+    elif key == simplegui.KEY_MAP['left'] or key == simplegui.KEY_MAP['right']:
+        my_ship.angle_vel = 0
 
-    
 
 # initialize frame
 frame = simplegui.create_frame("Asteroids", WIDTH, HEIGHT)
 
 # initialize ship and two sprites
-my_ship = Ship([WIDTH / 2, HEIGHT / 2], [0, 0], 0, ship_image, ship_info)
+my_ship = Ship([WIDTH / 2, HEIGHT / 2], [0, 0], 0, ship_image, ship_info, ship_thrust_sound)
 a_rock = Sprite([WIDTH / 3, HEIGHT / 3], [1, 1], 0, 0, asteroid_image, asteroid_info)
 a_missile = Sprite([2 * WIDTH / 3, 2 * HEIGHT / 3], [-1,1], 0, 0, missile_image, missile_info, missile_sound)
 
