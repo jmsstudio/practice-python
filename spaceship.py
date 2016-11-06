@@ -113,33 +113,19 @@ class Ship:
 
         self.angle += self.angle_vel
 
-        if self.thrust:
-            self.vel = angle_to_vector(self.angle)
-        else:
-            if self.vel[0] > 0.1:
-                self.vel[0] -= 0.03
-            elif self.vel[0] < -0.1:
-                self.vel[0] += 0.03
-            else:
-                self.vel[0] = 0
 
-            if self.vel[1] > 0.1:
-                self.vel[1] -= 0.03
-            elif self.vel[1] < -0.1:
-                self.vel[1] += 0.03
-            else:
-                self.vel[1] = 0
+        if self.thrust:
+            orientation = angle_to_vector(self.angle)
+            self.vel[0] += orientation[0] * 0.04
+            self.vel[1] += orientation[1] * 0.04
+        else:
+            #friction
+            self.vel[0] *= (1 - 0.03)
+            self.vel[1] *= (1 - 0.03)
 
             
-        if self.pos[0] >= WIDTH:
-            self.pos[0] = 0
-        elif self.pos[0] <= 0:
-            self.pos[0] = WIDTH - 1
-
-        if self.pos[1] >= HEIGHT:
-            self.pos[1] = 0
-        elif self.pos[1] <= 0:
-            self.pos[1] = HEIGHT - 1
+        self.pos[0] = self.pos[0] % WIDTH
+        self.pos[1] = self.pos[1] % HEIGHT
 
     def turn_left(self):
         self.angle_vel -= 0.04
@@ -159,12 +145,18 @@ class Ship:
 
     def shoot(self):
         global a_missile
+        missile_direction = angle_to_vector(self.angle)
         
-        pos = (self.pos[0], self.pos[1])
-        vel = angle_to_vector(self.angle)
-        vel = (vel[0] * 1.5, vel[1] * 1.5)
-
-        a_missile = Sprite(pos, vel, self.angle, self.angle_vel, missile_image, missile_info, missile_sound)
+        #set missile position at ship tip
+        missile_pos = [self.pos[0] + (self.image_size[0] / 2) * missile_direction[0], self.pos[1] + (self.image_size[1] / 2) * missile_direction[1]]
+        missile_vel = [self.vel[0], self.vel[1]]
+        
+        #set missile vel
+        missile_vel[0] += missile_direction[0] * 3
+        missile_vel[1] += missile_direction[1] * 3
+        
+        #create missile
+        a_missile = Sprite(missile_pos, missile_vel, self.angle, 0, missile_image, missile_info, missile_sound) 
         
     def __str__(self):
         ship_txt = 'Ship: '
@@ -290,4 +282,4 @@ timer = simplegui.create_timer(1000.0, rock_spawner)
 
 # get things rolling
 timer.start()
-frame.start()
+frame.start()        
