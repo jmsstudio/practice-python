@@ -88,7 +88,7 @@ def dist(p,q):
 
 # Ship class
 class Ship:
-    def __init__(self, pos, vel, angle, image, info, thrust_sound):
+    def __init__(self, pos, vel, angle, image, info, thrust_sound = None):
         self.pos = [pos[0],pos[1]]
         self.vel = [vel[0],vel[1]]
         self.thrust = False
@@ -115,7 +115,22 @@ class Ship:
 
         if self.thrust:
             self.vel = angle_to_vector(self.angle)
-        
+        else:
+            if self.vel[0] > 0.1:
+                self.vel[0] -= 0.03
+            elif self.vel[0] < -0.1:
+                self.vel[0] += 0.03
+            else:
+                self.vel[0] = 0
+
+            if self.vel[1] > 0.1:
+                self.vel[1] -= 0.03
+            elif self.vel[1] < -0.1:
+                self.vel[1] += 0.03
+            else:
+                self.vel[1] = 0
+
+            
         if self.pos[0] >= WIDTH:
             self.pos[0] = 0
         elif self.pos[0] <= 0:
@@ -126,13 +141,11 @@ class Ship:
         elif self.pos[1] <= 0:
             self.pos[1] = HEIGHT - 1
 
-            
-            
     def turn_left(self):
-        self.angle_vel -= 0.02
+        self.angle_vel -= 0.04
         
     def turn_right(self):
-        self.angle_vel += 0.02
+        self.angle_vel += 0.04
         
     def do_thrust(self, is_thrusting = True):
         self.thrust = is_thrusting
@@ -143,17 +156,16 @@ class Ship:
         if not is_thrusting:
             self.thrust_sound.pause()
             self.thrust_sound.rewind()
-            if self.vel[0] > 0 and self.vel[0] - 1 > 1:
-                self.vel[0] -= 1
-            else:
-                self.vel[0] = 0
 
-            if self.vel[1] > 0 and self.vel[1] - 1 > 1:
-                self.vel[1] -= 1
-            else:
-                self.vel[1] = 0
+    def shoot(self):
+        global a_missile
+        
+        pos = (self.pos[0], self.pos[1])
+        vel = angle_to_vector(self.angle)
+        vel = (vel[0] * 1.5, vel[1] * 1.5)
 
-    
+        a_missile = Sprite(pos, vel, self.angle, self.angle_vel, missile_image, missile_info, missile_sound)
+        
     def __str__(self):
         ship_txt = 'Ship: '
         ship_txt += ' position: ' + str(self.pos)
@@ -184,11 +196,24 @@ class Sprite:
             sound.play()
    
     def draw(self, canvas):
-        canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size, self.radius)
+        canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size, self.angle)
     
     def update(self):
-        pass        
+        self.pos[0] += self.vel[0]
+        self.pos[1] += self.vel[1]
 
+        self.angle += self.angle_vel
+
+        if self.pos[0] >= WIDTH:
+            self.pos[0] = 0
+        elif self.pos[0] <= 0:
+            self.pos[0] = WIDTH - 1
+
+        if self.pos[1] >= HEIGHT:
+            self.pos[1] = 0
+        elif self.pos[1] <= 0:
+            self.pos[1] = HEIGHT - 1
+        
            
 def draw(canvas):
     global time
@@ -207,6 +232,9 @@ def draw(canvas):
     a_rock.draw(canvas)
     a_missile.draw(canvas)
     
+    canvas.draw_text('Score: ' + str(score), (20, 20), 20, 'White')
+    canvas.draw_text('Lives: ' + str(lives), (WIDTH - 100, 20), 20, 'White')
+    
     # update ship and sprites
     my_ship.update()
     a_rock.update()
@@ -214,7 +242,13 @@ def draw(canvas):
             
 # timer handler that spawns a rock    
 def rock_spawner():
-    pass
+    global a_rock
+    
+    vel = (random.random(), random.random())
+    
+    ang_vel = 0.01 if random.randrange(2) == 0 else -0.01
+    
+    a_rock = Sprite([random.randint(0, WIDTH), random.randint(0, HEIGHT)], vel, 0, ang_vel, asteroid_image, asteroid_info)
 
 def key_down(key):
     global my_ship
@@ -225,6 +259,8 @@ def key_down(key):
         my_ship.turn_right()
     elif key == simplegui.KEY_MAP['up']:
         my_ship.do_thrust()
+    elif key == simplegui.KEY_MAP['space']:
+        my_ship.shoot()
 
 def key_up(key):
     #controls thrust
@@ -242,7 +278,7 @@ frame = simplegui.create_frame("Asteroids", WIDTH, HEIGHT)
 
 # initialize ship and two sprites
 my_ship = Ship([WIDTH / 2, HEIGHT / 2], [0, 0], 0, ship_image, ship_info, ship_thrust_sound)
-a_rock = Sprite([WIDTH / 3, HEIGHT / 3], [1, 1], 0, 0, asteroid_image, asteroid_info)
+a_rock = Sprite([WIDTH / 3, HEIGHT / 3], [1, 1], 0, 0.01, asteroid_image, asteroid_info)
 a_missile = Sprite([2 * WIDTH / 3, 2 * HEIGHT / 3], [-1,1], 0, 0, missile_image, missile_info, missile_sound)
 
 # register handlers
